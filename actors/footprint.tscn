@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/footprint.gd" id="1_fp"]
+
+[node name="Footprint" type="Polygon2D"]
+color = Color(0.14, 0.09, 0.05, 0.45)
+polygon = PackedVector2Array(0, -6, 2.2, -4.6, 3.4, -1.5, 3.1, 2, 1.9, 4.8, 0, 6, -1.9, 4.8, -3.1, 2, -3.4, -1.5, -2.2, -4.6)
+script = ExtResource("1_fp")

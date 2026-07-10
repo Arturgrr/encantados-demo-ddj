@@ -1,0 +1,48 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://actors/caipora/caipora.gd" id="1_caipora"]
+[ext_resource type="Shader" path="res://actors/flash.gdshader" id="2_flash"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_flash"]
+shader = ExtResource("2_flash")
+shader_parameter/flash = 0.0
+shader_parameter/flash_color = Color(1, 0.15, 0.15, 1)
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_caipora"]
+radius = 14.0
+height = 60.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_spear"]
+size = Vector2(40, 16)
+
+[node name="Caipora" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_caipora")
+
+[node name="Visual" type="Node2D" parent="."]
+material = SubResource("ShaderMaterial_flash")
+
+[node name="Placeholder" type="Polygon2D" parent="Visual"]
+use_parent_material = true
+visible = false
+position = Vector2(0, -32)
+color = Color(0.45, 0.72, 0.35, 1)
+polygon = PackedVector2Array(0, -32, 7, -21, 5, -19, 8, -10, 17, -2, 7, 2, 10, 15, 8, 32, -8, 32, -10, 15, -7, 2, -8, -10, -5, -19, -7, -21)
+
+[node name="Sprite" type="AnimatedSprite2D" parent="Visual"]
+texture_filter = 2
+use_parent_material = true
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+position = Vector2(0, -30)
+shape = SubResource("CapsuleShape2D_caipora")
+
+[node name="SpearHitbox" type="Area2D" parent="."]
+position = Vector2(36, 0)
+collision_layer = 8
+collision_mask = 4
+monitoring = false
+
+[node name="Collision" type="CollisionShape2D" parent="SpearHitbox"]
+shape = SubResource("RectangleShape2D_spear")
