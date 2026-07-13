@@ -1,0 +1,48 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scenes/battle/battle.gd" id="1_battle"]
+[ext_resource type="PackedScene" path="res://environment/forest.tscn" id="2_forest"]
+[ext_resource type="Script" path="res://environment/props_scatter.gd" id="3_props"]
+[ext_resource type="PackedScene" path="res://actors/caipora/caipora.tscn" id="4_caipora"]
+[ext_resource type="PackedScene" path="res://actors/cuca/cuca.tscn" id="5_cuca"]
+[ext_resource type="PackedScene" path="res://ui/battle_hud.tscn" id="6_hud"]
+[ext_resource type="PackedScene" path="res://ui/dialogue_box.tscn" id="7_dlg"]
+
+[node name="Battle" type="Node2D"]
+script = ExtResource("1_battle")
+
+[node name="Background" type="Node2D" parent="."]
+
+[node name="Forest" parent="Background" instance=ExtResource("2_forest")]
+
+[node name="World" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Props" type="Node2D" parent="World"]
+y_sort_enabled = true
+script = ExtResource("3_props")
+
+[node name="Caipora" parent="World" instance=ExtResource("4_caipora")]
+position = Vector2(760, 648)
+
+[node name="Camera2D" type="Camera2D" parent="World/Caipora"]
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
+limit_left = 0
+limit_top = 0
+limit_right = 2304
+limit_bottom = 1296
+
+[node name="Cuca" parent="World" instance=ExtResource("5_cuca")]
+position = Vector2(1540, 648)
+
+[node name="Atmosphere" type="ColorRect" parent="."]
+z_index = 100
+mouse_filter = 2
+offset_right = 2304.0
+offset_bottom = 1296.0
+color = Color(0.0, 0.02, 0.05, 0.28)
+
+[node name="BattleHUD" parent="." instance=ExtResource("6_hud")]
+
+[node name="DialogueBox" parent="." instance=ExtResource("7_dlg")]
