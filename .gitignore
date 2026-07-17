@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Builds gerados localmente ou pelo CI
+/build/
+/Encantados-*.zip
