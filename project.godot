@@ -35,3 +35,6 @@ window/stretch/aspect="expand"
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+; Obrigatório para exportar o macOS como "universal" (Intel + Apple Silicon):
+; o Godot recusa qualquer build que inclua arm64 com o ETC2 ASTC desligado.
+textures/vram_compression/import_etc2_astc=true
