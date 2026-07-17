@@ -16,10 +16,12 @@ env:
   EXPORT_NAME: Encantados
 
 jobs:
-  build:
-    name: Build (Windows, Linux e macOS)
+  # ---------------------------------------------------------------------------
+  # Windows e Linux saem de um runner Linux, que é rápido e barato.
+  # ---------------------------------------------------------------------------
+  windows-linux:
+    name: Build Windows e Linux
     runs-on: ubuntu-latest
-
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
@@ -39,7 +41,6 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           mv templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
-
           godot --version
 
       - name: Importar os assets
@@ -48,27 +49,97 @@ jobs:
         # importação terminar de verdade.
         run: godot --headless --path . --import
 
-      - name: Exportar os builds
+      - name: Exportar
         run: |
           set -e
-          mkdir -p build/windows build/linux build/macos
+          mkdir -p build/windows build/linux
           godot --headless --path . --export-release "Windows Desktop" "build/windows/${EXPORT_NAME}.exe"
           godot --headless --path . --export-release "Linux" "build/linux/${EXPORT_NAME}.x86_64"
-          godot --headless --path . --export-release "macOS" "build/macos/${EXPORT_NAME}.zip"
           chmod +x "build/linux/${EXPORT_NAME}.x86_64"
 
-      - name: Empacotar para download
+      - name: Empacotar
         run: |
           set -e
           cd build
           zip -qr "../${EXPORT_NAME}-windows.zip" windows
           zip -qr "../${EXPORT_NAME}-linux.zip" linux
-          # O export de macOS já sai zipado (o .app é uma pasta), então só renomeia.
-          mv "macos/${EXPORT_NAME}.zip" "../${EXPORT_NAME}-macos.zip"
           cd ..
           ls -lh ./*.zip
 
-      - name: Publicar a release
+      - name: Guardar para a release
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop
+          path: ${{ env.EXPORT_NAME }}-*.zip
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # O macOS PRECISA de um runner macOS: só lá o Godot consegue montar o .dmg
+  # (usa o hdiutil, que é ferramenta do próprio sistema) e assinar o app. Feito
+  # no Linux, o .app chega quebrado ("está danificado") no Mac de quem baixa.
+  # ---------------------------------------------------------------------------
+  macos:
+    name: Build macOS (.dmg)
+    runs-on: macos-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Godot e os templates de exportação
+        run: |
+          set -e
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -sL -o godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          curl -sL -o templates.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+
+          unzip -q godot.zip
+          sudo mv Godot.app /Applications/
+          echo "GODOT=/Applications/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+
+          # No macOS os templates ficam em Application Support, não em .local.
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q templates.tpz
+          mv templates/* "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+          /Applications/Godot.app/Contents/MacOS/Godot --version
+
+      - name: Importar os assets
+        run: |
+          "$GODOT" --headless --path . --import
+
+      - name: Exportar o .dmg
+        # O caminho terminando em .dmg faz o Godot montar a imagem de disco
+        # pronta para arrastar o app até a pasta Aplicativos.
+        run: |
+          set -e
+          mkdir -p build/macos
+          "$GODOT" --headless --path . --export-release "macOS" "build/macos/${EXPORT_NAME}.dmg"
+          ls -lh build/macos
+          mv "build/macos/${EXPORT_NAME}.dmg" "./${EXPORT_NAME}-macos.dmg"
+
+      - name: Guardar para a release
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: ${{ env.EXPORT_NAME }}-macos.dmg
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Junta o que os dois jobs produziram e publica a release.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Publicar a release
+    needs: [windows-linux, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pegar os builds
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Conferir o que chegou
+        run: ls -lh
+
+      - name: Publicar
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v0.1.${{ github.run_number }}
@@ -83,7 +154,11 @@ jobs:
             |---|---|---|
             | Windows | `${{ env.EXPORT_NAME }}-windows.zip` | Extraia e abra `${{ env.EXPORT_NAME }}.exe` |
             | Linux | `${{ env.EXPORT_NAME }}-linux.zip` | Extraia e rode `./${{ env.EXPORT_NAME }}.x86_64` |
-            | macOS | `${{ env.EXPORT_NAME }}-macos.zip` | Extraia o `.app`. Como não é assinado, na primeira vez abra com **botão direito → Abrir** |
+            | macOS | `${{ env.EXPORT_NAME }}-macos.dmg` | Abra o `.dmg` e arraste o jogo para *Aplicativos* |
+
+            > **No macOS**, na primeira vez abra com **botão direito → Abrir**. O app é
+            > assinado só em modo ad-hoc (assinatura completa exige conta paga da
+            > Apple), então o sistema pede essa confirmação uma única vez.
 
             ## Controles
             - **Mover**: WASD, setas ou qualquer analógico do controle
@@ -92,4 +167,4 @@ jobs:
           files: |
             ${{ env.EXPORT_NAME }}-windows.zip
             ${{ env.EXPORT_NAME }}-linux.zip
-            ${{ env.EXPORT_NAME }}-macos.zip
+            ${{ env.EXPORT_NAME }}-macos.dmg
